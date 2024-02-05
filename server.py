@@ -1,4 +1,5 @@
 from fastapi import FastAPI,File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 from torchvision import  models
 import torch
@@ -76,6 +77,14 @@ data = {
 #START OF RELEVANT SERVER CODE
 app = FastAPI(title="ASL api")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/")
 def hello_server():
     return "server is up"
@@ -122,11 +131,12 @@ def read_imagefile(file) -> Image.Image:
 
 @app.post("/predict/image")
 async def predict_api(file: UploadFile = File(...)):
-    
+    print("in the request")
     extension = file.filename.split(".")[-1] in ("jpg", "jpeg", "png")
     if not extension:
         return "Image must be jpg or png format!"
     image = read_imagefile(await file.read())
+    print("can't read image file")
     prediction = predict(image,model,server_used=True)
 
     response = {}
@@ -141,4 +151,4 @@ async def predict_api(file: UploadFile = File(...)):
 if __name__ == "__main__":
     model=load_model()
    
-    uvicorn.run(app)
+    uvicorn.run(app,port=8000)
