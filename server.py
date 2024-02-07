@@ -131,12 +131,11 @@ def read_imagefile(file) -> Image.Image:
 
 @app.post("/predict/image")
 async def predict_api(file: UploadFile = File(...)):
-    print("in the request")
     extension = file.filename.split(".")[-1] in ("jpg", "jpeg", "png")
     if not extension:
+        
         return "Image must be jpg or png format!"
     image = read_imagefile(await file.read())
-    print("can't read image file")
     prediction = predict(image,model,server_used=True)
 
     response = {}
