@@ -9,6 +9,7 @@ const CustomWebcam = () => {
   const [prediction, setPred] = useState(null);
   const [model, setModel] = useState(null);
   const [predictions, setPredictions] = useState([]);
+  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     let isCancelled = false;
@@ -18,8 +19,8 @@ const CustomWebcam = () => {
         flipHorizontal: false, // flip e.g for video
         imageScaleFactor: 0.9, // reduce input image size for gains in speed.
         maxNumBoxes: 2, // maximum number of boxes to detect
-        iouThreshold: 0.8, // ioU threshold for non-max suppression
-        scoreThreshold: 0.9, // confidence threshold for predictions.
+        iouThreshold: 0.5, // ioU threshold for non-max suppression
+        scoreThreshold: 0.75, // confidence threshold for predictions.
       };
       const model = await handTrack.load(modelParams);
       if (!isCancelled) {
@@ -48,7 +49,12 @@ const CustomWebcam = () => {
       webcamRef.current.video.height = videoHeight;
 
       const prediction = await model.detect(video);
-      setPredictions(prediction);
+      const filtered_preds = prediction.filter((obj) => {
+        if (obj.label !== "face") {
+          return obj;
+        }
+      });
+      setPredictions(filtered_preds);
     }
   }, [model]);
 
@@ -62,8 +68,16 @@ const CustomWebcam = () => {
   }, [model, detect]);
 
   const capture = useCallback(() => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    setImgSrc(imageSrc);
+    let countdownValue = 3; // 5 seconds countdown
+    setCountdown(countdownValue);
+    const countdownTimer = setInterval(() => {
+      setCountdown((prevCountdown) => prevCountdown - 1);
+    }, 1000);
+    setTimeout(() => {
+      clearInterval(countdownTimer);
+      const imageSrc = webcamRef.current.getScreenshot();
+      setImgSrc(imageSrc);
+    }, countdownValue * 1000);
   }, [webcamRef]);
 
   const retake = () => {
@@ -108,9 +122,34 @@ const CustomWebcam = () => {
   };
 
   return (
-    <div className="container">
+    <div
+      className="container"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       {imgSrc ? (
-        <img src={imgSrc} alt="webcam" />
+        <div style={{ position: "relative" }}>
+          <img src={imgSrc} alt="webcam" />
+          {predictions.map((prediction, i) => (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                top: prediction.bbox[1],
+                left: prediction.bbox[0],
+                height: prediction.bbox[3],
+                width: prediction.bbox[2],
+                borderWidth: 2,
+                borderColor: "red",
+                borderStyle: "solid",
+              }}
+            ></div>
+          ))}
+        </div>
       ) : (
         <div style={{ position: "relative" }}>
           <Webcam
@@ -119,9 +158,8 @@ const CustomWebcam = () => {
             ref={webcamRef}
             screenshotFormat="image/jpeg"
             style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
+              position: "relative",
+
               zIndex: -1,
             }}
           />
@@ -142,7 +180,7 @@ const CustomWebcam = () => {
           ))}
         </div>
       )}
-      <div className="btn-container">
+      <div className="btn-container" style={{ textAlign: "center" }}>
         {imgSrc ? (
           <div>
             <button onClick={retake}>Retake photo</button>
@@ -155,10 +193,15 @@ const CustomWebcam = () => {
             </form>
           </div>
         ) : (
-          <button onClick={capture}>Capture photo</button>
+          <div>
+            {countdown > 0 && (
+              <p>Photo will be taken in: {countdown} seconds</p>
+            )}
+            <button onClick={capture}>Capture photo</button>
+          </div>
         )}
       </div>
-      <div>
+      <div style={{ textAlign: "center" }}>
         {prediction ? (
           <div>
             {" "}
