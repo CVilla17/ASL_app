@@ -81,12 +81,11 @@ const CustomWebcam = () => {
       const imageSrc = webcamRef.current.getScreenshot();
       crop_bounding(imageSrc, predictions[0])
         .then((croppedImgSrc) => {
-          console.log("doing stuff?");
           setUpImg(croppedImgSrc);
           setImgSrc(imageSrc);
         })
         .catch((err) => {
-          console.log("bruh");
+          console.log("ERROR in cropping");
         });
     }, countdownValue * 1000);
   }, [webcamRef, predictions]);
@@ -94,6 +93,7 @@ const CustomWebcam = () => {
   const retake = () => {
     setImgSrc(null);
     setPred(null);
+    setUpImg(null);
   };
 
   const setImageAction = async (event) => {
