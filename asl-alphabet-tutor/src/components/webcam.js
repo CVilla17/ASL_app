@@ -3,9 +3,12 @@ import { useCallback, useRef, useState, useEffect } from "react"; // import useC
 import Webcam from "react-webcam";
 import * as handTrack from "handtrackjs";
 
+import { crop_bounding } from "./image_processing.js";
+
 const CustomWebcam = () => {
   const webcamRef = useRef(null); // create a webcam reference
   const [imgSrc, setImgSrc] = useState(null); // initialize it
+  const [uploadImg, setUpImg] = useState(null);
   const [prediction, setPred] = useState(null);
   const [model, setModel] = useState(null);
   const [predictions, setPredictions] = useState([]);
@@ -67,8 +70,8 @@ const CustomWebcam = () => {
     }
   }, [model, detect]);
 
-  const capture = useCallback(() => {
-    let countdownValue = 3; // 5 seconds countdown
+  const capture = useCallback(async () => {
+    let countdownValue = 3; // 3 seconds countdown
     setCountdown(countdownValue);
     const countdownTimer = setInterval(() => {
       setCountdown((prevCountdown) => prevCountdown - 1);
@@ -76,9 +79,17 @@ const CustomWebcam = () => {
     setTimeout(() => {
       clearInterval(countdownTimer);
       const imageSrc = webcamRef.current.getScreenshot();
-      setImgSrc(imageSrc);
+      crop_bounding(imageSrc, predictions[0])
+        .then((croppedImgSrc) => {
+          console.log("doing stuff?");
+          setUpImg(croppedImgSrc);
+          setImgSrc(imageSrc);
+        })
+        .catch((err) => {
+          console.log("bruh");
+        });
     }, countdownValue * 1000);
-  }, [webcamRef]);
+  }, [webcamRef, predictions]);
 
   const retake = () => {
     setImgSrc(null);
@@ -89,7 +100,8 @@ const CustomWebcam = () => {
     event.preventDefault();
 
     const formData = new FormData();
-    const response = await fetch(imgSrc);
+    console.log("upload img:", uploadImg);
+    const response = await fetch(uploadImg);
     const blob = await response.blob();
     const file = new File([blob], "unknown_sign.jpg");
     formData.append("file", file);
@@ -103,11 +115,12 @@ const CustomWebcam = () => {
     const data = await fetch("http://localhost:8000/predict/image", {
       method: "post",
       headers: {},
-      type: "image/jpeg",
+      type: "image/png",
       accept: "application/json",
       body: formData,
     });
     const uploadedImage = await data.json();
+
     if (uploadedImage) {
       console.log("Successfully uploaded image");
       console.log("guess", uploadedImage[0].predicted);

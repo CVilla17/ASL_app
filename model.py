@@ -370,7 +370,7 @@ def process_image(image_path,server_used=False):
     """Process an image path into a PyTorch tensor"""
 
     if server_used:
-        image=image_path
+        image=image_path.convert("RGB")
     else:
         image = Image.open(image_path)
     # Resize
