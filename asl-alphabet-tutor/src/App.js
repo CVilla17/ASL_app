@@ -5,7 +5,8 @@ import CustomWebcam from "./components/webcam"; // import it
 function App() {
   return (
     <div className="App">
-      <CustomWebcam />
+      <CustomWebcam className="left" />
+      <div className="right">INSTRUCTIONS</div>
     </div>
   );
 }
